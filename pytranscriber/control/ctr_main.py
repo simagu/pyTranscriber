@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from PyQt5.QtCore import Qt
 from pathlib import Path
 from pytranscriber.model.param_autosub import Param_Autosub
+from pytranscriber.model.gui_default_values import GUI_DefaultValues
 from pytranscriber.util.util import MyUtil
 from pytranscriber.control.thread_exec_autosub import Thread_Exec_Autosub
 from pytranscriber.control.thread_cancel_autosub import Thread_Cancel_Autosub
@@ -197,10 +198,15 @@ class Ctr_Main():
         #default output folder at user desktop
         userHome = Path.home()
         pathOutputFolder = userHome / 'Desktop' / 'pyTranscriber'
-        self.objGUI.qleOutputFolder.setText(str(pathOutputFolder))
+        
+        guiDefaultvalues = GUI_DefaultValues()
+        
+        if os.path.isdir(guiDefaultvalues.outputFolder):
+            self.objGUI.qleOutputFolder.setText(guiDefaultvalues.outputFolder)
+        if (guiDefaultvalues.langCode != ""):
+            self.objGUI.cbSelectLang.setCurrentText(guiDefaultvalues.langCode)
 
         self.objGUI.bRemoveFile.setEnabled(False)
-
         self.objGUI.bCancel.hide()
 
         #button listeners
@@ -271,8 +277,16 @@ class Ctr_Main():
 
     def __listenerBSelectMedia(self):
         #options = QFileDialog.Options()
+        guiDefaultvalues = GUI_DefaultValues()
         options = QFileDialog.DontUseNativeDialog
-        files, _ = QFileDialog.getOpenFileNames(self.objGUI.centralwidget, "Select media", "","All Media Files (*.mp3 *.mp4 *.wav *.m4a *.wma)")
+        defaultFileDirectory = guiDefaultvalues.selectedFolder
+        if not os.path.isdir(defaultFileDirectory):
+            defaultFileDirectory = ""
+        files, _ = QFileDialog.getOpenFileNames(
+            self.objGUI.centralwidget, 
+            "Select media", 
+            defaultFileDirectory,
+            "All Media Files (*.mp3 *.mp4 *.wav *.m4a *.wma)")
 
         if files:
             self.objGUI.qlwListFilesSelected.addItems(files)
@@ -296,6 +310,16 @@ class Ctr_Main():
                 listFiles.append(str(self.objGUI.qlwListFilesSelected.item(i).text()))
 
             outputFolder = self.objGUI.qleOutputFolder.text()
+            lastSelectedFile = listFiles[-1]
+            lastSelectedFileDir = os.path.dirname(os.path.abspath(lastSelectedFile))
+
+            #save user selected values
+            objGuiDefaultValues = GUI_DefaultValues()
+            objGuiDefaultValues.langCode = selectedLanguage
+            objGuiDefaultValues.selectedFolder = lastSelectedFileDir
+            objGuiDefaultValues.outputFolder = outputFolder
+            objGuiDefaultValues.writeToFile()
+
 
             if self.objGUI.chbxOpenOutputFilesAuto.checkState() == Qt.Checked:
                 boolOpenOutputFilesAuto = True
@@ -307,7 +331,7 @@ class Ctr_Main():
 
             #execute the main process in separate thread to avoid gui lock
             self.thread_exec = Thread_Exec_Autosub(objParamAutosub)
-
+            
             #connect signals from work thread to gui controls
             self.thread_exec.signalLockGUI.connect(self.__lockButtonsDuringOperation)
             self.thread_exec.signalResetGUIAfterSuccess.connect(self.__resetGUIAfterSuccess)
@@ -411,3 +435,4 @@ class Ctr_Main():
         msg.setWindowTitle("Error!")
         msg.setText(errorMsg)
         msg.exec()
+

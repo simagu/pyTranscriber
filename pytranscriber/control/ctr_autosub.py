@@ -10,6 +10,7 @@ from autosub.formatters import FORMATTERS
 import multiprocessing
 import time
 import os
+import platform
 
 from pytranscriber.util.util import MyUtil
 
@@ -60,7 +61,6 @@ class Ctr_Autosub():
             concurrency=DEFAULT_CONCURRENCY,
             subtitle_file_format=DEFAULT_SUBTITLE_FORMAT
         ):
-
         # windows not support forkserver... only spawn
         if os.name != "nt" and "Darwin" in os.uname():
             # necessary for running on MacOS
@@ -81,6 +81,15 @@ class Ctr_Autosub():
         recognizer = SpeechRecognizer(language=src_language, rate=audio_rate,
                                       api_key=GOOGLE_SPEECH_API_KEY)
         transcripts = []
+        
+        #clear console
+        if platform.system().lower() == 'windows':
+            clear = lambda: os.system('cls')
+        else:
+            clear = lambda: os.system('clear')
+        clear()
+
+        print('Start transcriber from file: ', source_path)
         if regions:
             try:
                 if Ctr_Autosub.cancel:
@@ -104,6 +113,8 @@ class Ctr_Autosub():
                 str_task_2 = "Step 2 of 2: Performing speech recognition "
                 Ctr_Autosub.pool = multiprocessing.Pool(concurrency)
                 for i, transcript in enumerate(Ctr_Autosub.pool.imap(recognizer, extracted_regions)):
+                    #if no ouptput any thing to console, the app will crash (when pyinstaller generator exeute file on windows)
+                    print(i, ': ', transcript)
                     Ctr_Autosub.step = 2
                     transcripts.append(transcript)
                     progress_percent = MyUtil.percentage(i, len_regions)
@@ -114,12 +125,19 @@ class Ctr_Autosub():
                 else:
                     Ctr_Autosub.pool.close()
                     Ctr_Autosub.pool.join()
+                print('Speech recognition complete')
 
             except KeyboardInterrupt:
                 Ctr_Autosub.pbar.finish()
                 Ctr_Autosub.pool.terminate()
                 Ctr_Autosub.pool.join()
                 raise
+            except:
+                Ctr_Autosub.pbar.finish()
+                Ctr_Autosub.pool.terminate()
+                Ctr_Autosub.pool.join()
+                raise
+
 
         timed_subtitles = [(r, t) for r, t in zip(regions, transcripts) if t]
         formatter = FORMATTERS.get(subtitle_file_format)

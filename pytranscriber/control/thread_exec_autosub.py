@@ -20,7 +20,6 @@ from pytranscriber.util.util import MyUtil
 from pytranscriber.control.ctr_autosub import Ctr_Autosub
 import os
 
-
 class Thread_Exec_Autosub(QThread):
     signalLockGUI = pyqtSignal()
     signalResetGUIAfterCancel = pyqtSignal()
@@ -29,7 +28,7 @@ class Thread_Exec_Autosub(QThread):
     signalProgressFileYofN = pyqtSignal(str)
     signalErrorMsg = pyqtSignal(str)
 
-    def __init__(self, objParamAutosub):
+    def __init__(self, objParamAutosub):        
         self.objParamAutosub = objParamAutosub
         self.running = True
         QThread.__init__(self)
@@ -89,14 +88,14 @@ class Thread_Exec_Autosub(QThread):
         #if output directory does not exist, creates it
         pathOutputFolder = Path(self.objParamAutosub.outputFolder)
 
-        if not os.path.exists(pathOutputFolder):
+        if not os.path.exists(pathOutputFolder):            
             os.mkdir(pathOutputFolder)
         #if there the output file is not a directory
         if not os.path.isdir(pathOutputFolder):
             #force the user to select a different output directory
             self.signalErrorMsg.emit("Error! Invalid output folder. Please choose another one.")
         else:
-            #go ahead with autosub process
+            #go ahead with autosub process            
             nFiles = len(self.objParamAutosub.listFiles)
             for i in range(nFiles):
                 #does not continue the loop if user clicked cancel button
@@ -111,8 +110,8 @@ class Thread_Exec_Autosub(QThread):
                 self.signalResetGUIAfterSuccess.emit()
 
 
-    def run(self):
-        Ctr_Autosub.init()
+    def run(self):        
+        Ctr_Autosub.init()        
         self.__loopSelectedFiles()
         self.running = False
 
